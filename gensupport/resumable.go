@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
+	"google.golang.org/api/googleapi"
 )
 
 const (
@@ -119,6 +120,14 @@ func (rx *ResumableUpload) Upload(ctx context.Context) (resp *http.Response, err
 			if resp != nil && resp.Body != nil {
 				resp.Body.Close()
 			}
+			return nil, err
+		}
+		// Some APIs (Drive for example) allow a resumable session to be initiated for updating
+		// a resource (a File for example) that is not writable by the caller. In this case,
+		// an exception will be thrown by the first chunk upload request. If not handled, the
+		// upload would loop forever.
+		err = googleapi.CheckResponse(resp)
+		if err != nil {
 			return nil, err
 		}
 		if resp.StatusCode == http.StatusCreated || resp.StatusCode == http.StatusOK {
